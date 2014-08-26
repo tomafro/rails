@@ -1,5 +1,5 @@
-require 'base64'
 require 'active_support/core_ext/object/blank'
+require 'active_support/strict_base64_encoder'
 
 module ActiveSupport
   # +MessageVerifier+ makes it easy to generate and verify messages which are
@@ -30,6 +30,7 @@ module ActiveSupport
       @secret = secret
       @digest = options[:digest] || 'SHA1'
       @serializer = options[:serializer] || Marshal
+      @encoder = options[:encoder] || StrictBase64Encoder
     end
 
     def verify(signed_message)
@@ -38,7 +39,7 @@ module ActiveSupport
       data, digest = signed_message.split("--")
       if data.present? && digest.present? && secure_compare(digest, generate_digest(data))
         begin
-          @serializer.load(::Base64.strict_decode64(data))
+          @serializer.load(@encoder.decode(data))
         rescue ArgumentError => argument_error
           raise InvalidSignature if argument_error.message =~ %r{invalid base64}
           raise
@@ -49,7 +50,7 @@ module ActiveSupport
     end
 
     def generate(value)
-      data = ::Base64.strict_encode64(@serializer.dump(value))
+      data = @encoder.encode(@serializer.dump(value))
       "#{data}--#{generate_digest(data)}"
     end
 

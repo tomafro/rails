@@ -9,6 +9,7 @@ else
 
 require 'active_support/time'
 require 'active_support/json'
+require 'active_support/core_ext/string'
 
 class MessageVerifierTest < ActiveSupport::TestCase
 
@@ -19,6 +20,18 @@ class MessageVerifierTest < ActiveSupport::TestCase
 
     def load(value)
       ActiveSupport::JSON.decode(value)
+    end
+  end
+
+  class TestEncoder
+    PREFIX = "#{self.name}-"
+
+    def encode(data)
+      PREFIX + Base64.strict_encode64(data)
+    end
+
+    def decode(data)
+      Base64.strict_decode64 data.from(PREFIX.length)
     end
   end
 
@@ -53,6 +66,13 @@ class MessageVerifierTest < ActiveSupport::TestCase
     assert_equal exp, verifier.verify(message)
   ensure
     ActiveSupport.use_standard_json_time_format = prev
+  end
+
+  def test_alternative_encoding_method
+    verifier = ActiveSupport::MessageVerifier.new("Hey, I'm a secret!", :encoder => TestEncoder.new)
+    message = verifier.generate(@data)
+    assert message.starts_with?(TestEncoder::PREFIX)
+    assert_equal @data, verifier.verify(message)
   end
 
   def test_raise_error_when_argument_class_is_not_loaded

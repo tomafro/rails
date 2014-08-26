@@ -9,6 +9,7 @@ else
 
 require 'active_support/time'
 require 'active_support/json'
+require 'active_support/core_ext/string'
 
 class MessageEncryptorTest < ActiveSupport::TestCase
   class JSONSerializer
@@ -18,6 +19,18 @@ class MessageEncryptorTest < ActiveSupport::TestCase
 
     def load(value)
       ActiveSupport::JSON.decode(value)
+    end
+  end
+
+  class TestEncoder
+    PREFIX = "#{self.name}-"
+
+    def encode(data)
+      PREFIX + Base64.strict_encode64(data)
+    end
+
+    def decode(data)
+      Base64.strict_decode64 data.from(PREFIX.length)
     end
   end
 
@@ -64,6 +77,14 @@ class MessageEncryptorTest < ActiveSupport::TestCase
     assert_equal exp, encryptor.decrypt_and_verify(message)
   ensure
     ActiveSupport.use_standard_json_time_format = prev
+  end
+
+  def test_alternative_encryption_method
+    encryptor = ActiveSupport::MessageEncryptor.new(SecureRandom.hex(64), SecureRandom.hex(64), :encoder => TestEncoder.new)
+    message = encryptor.encrypt_and_sign(@data)
+    assert message.starts_with?(TestEncoder::PREFIX)
+    exp = { "foo" => 123, "bar" => "2010-01-01T00:00:00.000Z" }
+    assert_equal @data, encryptor.decrypt_and_verify(message)
   end
 
   def test_message_obeys_strict_encoding

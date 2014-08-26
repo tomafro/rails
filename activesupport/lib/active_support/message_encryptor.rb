@@ -1,6 +1,6 @@
 require 'openssl'
-require 'base64'
 require 'active_support/core_ext/array/extract_options'
+require 'active_support/strict_base64_encoder'
 
 module ActiveSupport
   # MessageEncryptor is a simple way to encrypt values which get stored
@@ -48,7 +48,8 @@ module ActiveSupport
       @secret = secret
       @sign_secret = sign_secret
       @cipher = options[:cipher] || 'aes-256-cbc'
-      @verifier = MessageVerifier.new(@sign_secret || @secret, digest: options[:digest] || 'SHA1', serializer: NullSerializer)
+      @encoder = options[:encoder] || StrictBase64Encoder
+      @verifier = MessageVerifier.new(@sign_secret || @secret, digest: options[:digest] || 'SHA1', serializer: NullSerializer, encoder: @encoder)
       @serializer = options[:serializer] || Marshal
     end
 
@@ -77,12 +78,12 @@ module ActiveSupport
       encrypted_data = cipher.update(@serializer.dump(value))
       encrypted_data << cipher.final
 
-      "#{::Base64.strict_encode64 encrypted_data}--#{::Base64.strict_encode64 iv}"
+      "#{@encoder.encode encrypted_data}--#{@encoder.encode iv}"
     end
 
     def _decrypt(encrypted_message)
       cipher = new_cipher
-      encrypted_data, iv = encrypted_message.split("--").map {|v| ::Base64.strict_decode64(v)}
+      encrypted_data, iv = encrypted_message.split("--").map {|v| @encoder.decode(v)}
 
       cipher.decrypt
       cipher.key = @secret
