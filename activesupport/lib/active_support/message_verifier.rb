@@ -120,6 +120,12 @@ module ActiveSupport
     end
 
     private
+      def split_message(signed_message)
+        parts = signed_message.split("--")
+        digest = parts.pop
+        [parts.join("--"), digest]
+      end
+
       def generate_digest(data)
         require 'openssl' unless defined?(OpenSSL)
         OpenSSL::HMAC.hexdigest(OpenSSL::Digest.const_get(@digest).new, @secret, data)
@@ -136,7 +142,7 @@ module ActiveSupport
 
       def verify_fully_encoded_message(message)
         if signed_message = @encoding.decode(message)
-          data, digest = signed_message.split("--")
+          data, digest = split_message(signed_message)
           @serializer.load(data) if digest_matches_data?(digest, data)
         end
       end
@@ -147,7 +153,7 @@ module ActiveSupport
       end
 
       def verify_partially_encoded_message(message)
-        data, digest = message.split("--")
+        data, digest = split_message(message)
         @serializer.load(@encoding.decode(data)) if digest_matches_data?(digest, data)
       end
   end

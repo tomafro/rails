@@ -28,6 +28,26 @@ class MessageVerifierTest < ActiveSupport::TestCase
     end
   end
 
+  class NullEncoding
+    def encode(value)
+      value
+    end
+
+    def decode(value)
+      value
+    end
+  end
+
+  class NullSerializer
+    def dump(value)
+      value
+    end
+
+    def load(value)
+      value
+    end
+  end
+
   def setup
     @verifier = ActiveSupport::MessageVerifier.new("Hey, I'm a secret!")
     @data = { :some => "data", :now => Time.local(2010) }
@@ -85,6 +105,14 @@ class MessageVerifierTest < ActiveSupport::TestCase
     decoded_message = Base64.strict_decode64(verified_message)
 
     assert_equal message, Marshal.load(decoded_message.split("--").first)
+    assert_equal message, verifier.verified(verified_message)
+  end
+
+  def test_digest_found_if_message_contains_separator
+    verifier = ActiveSupport::MessageVerifier.new("Hey, I'm a secret!", encoding: NullEncoding.new, serializer: NullSerializer.new)
+    message = "--------"
+    verified_message = verifier.generate(message)
+
     assert_equal message, verifier.verified(verified_message)
   end
 
