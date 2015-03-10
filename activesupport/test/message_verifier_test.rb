@@ -78,6 +78,16 @@ class MessageVerifierTest < ActiveSupport::TestCase
     assert_equal message, verifier.verified(verified_message)
   end
 
+  def test_encode_full_message
+    verifier = ActiveSupport::MessageVerifier.new("Hey, I'm a secret!", :encode_full_message => true)
+    message = { :foo => 123, 'bar' => Time.utc(2010) }
+    verified_message = verifier.generate(message)
+    decoded_message = Base64.strict_decode64(verified_message)
+
+    assert_equal message, Marshal.load(decoded_message.split("--").first)
+    assert_equal message, verifier.verified(verified_message)
+  end
+
   def test_raise_error_when_argument_class_is_not_loaded
     # To generate the valid message below:
     #
