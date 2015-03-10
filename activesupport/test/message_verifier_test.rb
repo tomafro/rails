@@ -2,6 +2,7 @@ require 'abstract_unit'
 require 'openssl'
 require 'active_support/time'
 require 'active_support/json'
+require 'active_support/core_ext/string'
 
 class MessageVerifierTest < ActiveSupport::TestCase
 
@@ -12,6 +13,18 @@ class MessageVerifierTest < ActiveSupport::TestCase
 
     def load(value)
       ActiveSupport::JSON.decode(value)
+    end
+  end
+
+  class TestEncoding
+    PREFIX = "test-prefix"
+
+    def encode(value)
+      PREFIX + value.reverse
+    end
+
+    def decode(value)
+      value.from(PREFIX.length).reverse
     end
   end
 
@@ -55,6 +68,14 @@ class MessageVerifierTest < ActiveSupport::TestCase
     assert_equal exp, verifier.verify(message)
   ensure
     ActiveSupport.use_standard_json_time_format = prev
+  end
+
+  def test_alternative_encoding_method
+    verifier = ActiveSupport::MessageVerifier.new("Hey, I'm a secret!", :encoding => TestEncoding.new)
+    message = { :foo => 123, 'bar' => Time.utc(2010) }
+    verified_message = verifier.generate(message)
+    assert verified_message.starts_with?(TestEncoding::PREFIX)
+    assert_equal message, verifier.verified(verified_message)
   end
 
   def test_raise_error_when_argument_class_is_not_loaded
