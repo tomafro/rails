@@ -576,6 +576,7 @@ module ActiveRecord
         @marked_for_destruction   = false
         @destroyed_by_association = nil
         @new_record               = true
+        @previously_new_record    = false
         @_start_transaction_state = {}
         @transaction_state        = nil
       end

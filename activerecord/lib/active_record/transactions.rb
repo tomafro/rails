@@ -389,6 +389,7 @@ module ActiveRecord
         @_start_transaction_state.reverse_merge!(
           id: id,
           new_record: @new_record,
+          previously_new_record: @previously_new_record,
           destroyed: @destroyed,
           attributes: @attributes,
           frozen?: frozen?,
@@ -424,6 +425,7 @@ module ActiveRecord
           if transaction_level < 1 || force_restore_state
             restore_state = @_start_transaction_state
             @new_record = restore_state[:new_record]
+            @previously_new_record = restore_state[:previously_new_record]
             @destroyed  = restore_state[:destroyed]
             @attributes = restore_state[:attributes].map do |attr|
               value = @attributes.fetch_value(attr.name)
